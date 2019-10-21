@@ -241,6 +241,10 @@ body {
     margin-bottom: 135px;
 }
 
-#result>div.win {
+#result.won>div {
     background-color: rgba(0, 0, 255);
+}
+
+#result.blackjack>div {
+    background-color: #ADFF26;
 }
