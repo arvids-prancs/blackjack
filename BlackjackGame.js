@@ -2,9 +2,7 @@ class BlackjackGame {
     constructor(container) {
         this.cardsTypes = ["club", "diamond", "heart", "spade"];
         this.cardsValues = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
-        //this.cardsValues = ["K", "A"];
         this.cardsPoints = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11];
-        //this.cardsPoints = [10, 11];
         this.cards = [];
         this.cardsIdx = [];
         for (let leni = this.cardsTypes.length, i = 0; i < leni; i++) {
@@ -17,8 +15,6 @@ class BlackjackGame {
                 this.cardsIdx.push(j + i * lenj);
             }
         }
-        console.log(this.cards);
-        console.log(this.cardsIdx);
         this.chipsValues = [10, 20, 50, 100, 500];
         this.bank = 1000;
         this.bet = 0;
@@ -45,7 +41,7 @@ class BlackjackGame {
         this.standButton.className = "button-div green";
         this.standButton.innerHTML = "Stand";
         this.standButton.onclick = () => {
-            console.log("stand");
+            this.dealersTurn();
         };
         //deal button
         this.dealButton = document.createElement("div");
@@ -65,6 +61,9 @@ class BlackjackGame {
         this.dealerCardsHolder;
         this.dealerPointsHolder;
         this.dealerPoints = 0;
+        this.dealerPointsTotal = 0;
+        this.dealerCardsCount = 0;
+        this.dealerAces = [];
         //player
         this.playerCardsHolder;
         this.playerPointsHolder;
@@ -74,6 +73,19 @@ class BlackjackGame {
         this.playerAces = [];
     }
     start() {
+        this.gameGrid.className = "intro";
+        let startButton = document.createElement("div");
+        startButton.className = "button-div green";
+        startButton.innerHTML = "Start game";
+        startButton.onclick = () => {
+            this.emptyDom(this.gameGrid);
+            this.displayGame();
+        };
+        this.gameGrid.appendChild(startButton);
+    }
+    displayGame() {
+        this.bank = 1000;
+        this.gameGrid.className = "game";
         this.displayRow1();
         this.displayRow2();
         this.displayRow3();
@@ -236,11 +248,23 @@ class BlackjackGame {
         return card;
     }
     addDealerCard() {
+        this.dealerCardsCount++;
         let card = this.getCard();
         let dealerCard = document.createElement("img");
         dealerCard.src = card.src;
         this.dealerCardsHolder.appendChild(dealerCard);
-        this.dealerPoints += card.points;
+        if (card.value === "A") {
+            this.dealerAces++;
+        }
+        this.dealerPointsTotal += card.points;
+        this.dealerPoints = this.dealerPointsTotal;
+        if (this.dealerAces > 0) {
+            let acesCount = this.dealerAces;
+            while (acesCount > 0 && this.dealerPoints > 21) {
+                this.dealerPoints -= 10;
+                acesCount--;
+            }
+        }
         document.getElementById("dealer-points").innerHTML = this.dealerPoints;
     }
     addPlayerCard() {
@@ -259,40 +283,69 @@ class BlackjackGame {
                 let acesCount = this.playerAces;
                 while (acesCount > 0 && this.playerPoints > 21) {
                     this.playerPoints -= 10;
-                    acesCount--;                   
+                    acesCount--;
                 }
             }
             document.getElementById("player-points").innerHTML = this.playerPoints;
             if (this.playerCardsCount === 2 && this.playerPoints === 21) {
-                this.displayResult("blackjack");
+                this.displayResult("won-blackjack");
+                this.bank += 2.5 * this.bet;
+                document.getElementById("bank").innerHTML = "€ " + this.bank;
             } else if (this.playerPoints > 21) {
                 this.displayResult("lost");
             } else if (this.playerPoints === 21) {
-                this.displayResult("won");
+                this.dealersTurn();
             }
         }
     }
+    dealersTurn() {
+        while (this.dealerPoints < 17 || this.dealerPoints < this.playerPoints) {
+            this.addDealerCard();
+        }
+        if (this.dealerCardsCount === 2 && this.dealerPoints === 21) {
+            this.displayResult("lost-blackjack");
+        } else if (this.dealerPoints > 21) {
+            this.displayResult("won");
+            this.bank += 2 * this.bet;
+            document.getElementById("bank").innerHTML = "€ " + this.bank;
+        } else if (this.dealerPoints === 21) {
+            this.displayResult("lost");
+        } else if (this.dealerPoints > this.playerPoints) {
+            this.displayResult("lost");
+        } else if (this.dealerPoints === this.playerPoints) {
+            this.displayResult("push");
+            this.bank += this.bet;
+            document.getElementById("bank").innerHTML = "€ " + this.bank;
+        }
+    }
     displayResult(win) {
-        //setTimeout(() => {
-            let resultDiv = document.createElement("div");
-            resultDiv.id = "result";
-            this.gameGrid.appendChild(resultDiv);
-            let resultText = document.createElement("div");
-            if (win === "won") {
+        let resultDiv = document.createElement("div");
+        resultDiv.id = "result";
+        this.gameGrid.appendChild(resultDiv);
+        let resultText = document.createElement("div");
+        resultDiv.className = win;
+        switch (win) {
+            case "won":
                 resultText.innerHTML = "You won";
-                resultDiv.className = "won";
-            } else if (win === "lost") {
+                break;
+            case "won-blackjack":
+                resultText.innerHTML = "You won Blackjack";
+                break;
+            case "lost":
                 resultText.innerHTML = "You lost";
-            } else if (win === "blackjack") {
-                resultText.innerHTML = "Blackjack";
-                resultDiv.className = "blackjack";
-            }
-            resultDiv.appendChild(resultText);
-            setTimeout(() => {
-                this.gameGrid.removeChild(resultDiv);
-                this.reset();
-            }, 2 * 1000);
-        //}, 1 * 1000);
+                break;
+            case "lost-blackjack":
+                resultText.innerHTML = "You lost Balckjack";
+                break;
+            case "push":
+                resultText.innerHTML = "Push";
+                break;
+        }
+        resultDiv.appendChild(resultText);
+        setTimeout(() => {
+            this.gameGrid.removeChild(resultDiv);
+            this.reset();
+        }, 2 * 1000);
     }
     reset() {
         this.cardsIdx = [];
@@ -301,12 +354,14 @@ class BlackjackGame {
                 this.cardsIdx.push(j + i * lenj);
             }
         }
-        console.log(this.cardsIdx);
-        this.playerPoints = 0;
         this.dealerPoints = 0;
+        this.dealerCardsCount = 0;
+        this.dealerAces = 0;
+        this.dealerPointsTotal = 0;
+        this.playerPoints = 0;
         this.playerCardsCount = 0;
         this.playerAces = 0;
-        this.playerPointsTotal=0;
+        this.playerPointsTotal = 0;
         this.bet = 0;
         this.emptyDom(this.dealerPointsHolder);
         this.emptyDom(this.dealerCardsHolder);
@@ -316,9 +371,14 @@ class BlackjackGame {
         document.getElementById("bet").innerHTML = "€ " + 0;
         this.rightButtonsHolder.removeChild(this.standButton);
         this.leftButtonsHolder.removeChild(this.hitButton);
-        this.rightButtonsHolder.appendChild(this.dealButton);
-        this.displayChips();
-        this.calculateBet();
+        if (this.bank === 0) {
+            this.emptyDom(this.gameGrid);
+            this.start();
+        } else {
+            this.rightButtonsHolder.appendChild(this.dealButton);
+            this.displayChips();
+            this.calculateBet();
+        }
     }
     //helpers
     getRndInteger(min, max) {
